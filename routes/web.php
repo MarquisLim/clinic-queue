@@ -38,8 +38,9 @@ Route::middleware(['auth'])->group(function () {
 
     Route::get('/appointments/mine', [AppointmentController::class, 'mine'])->name('appointments.mine');
     Route::post('/appointments',     [AppointmentController::class, 'store'])->name('appointments.store');
-    Route::delete('/appointments/{appointment}', [AppointmentController::class, 'destroy'])
-        ->name('appointments.destroy');
+    Route::delete('/appointments/{appointment}', [AppointmentController::class, 'destroy'])->name('appointments.destroy');
+    Route::get('/slots/availability', [SlotController::class, 'availability'])->name('slots.availability');
+    Route::get('/slots/day',          [SlotController::class, 'day'])->name('slots.day');
 });
 
 require __DIR__.'/auth.php';

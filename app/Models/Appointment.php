@@ -30,7 +30,7 @@ class Appointment extends Model
     ];
 
     protected $casts = [
-        'slot_start'  => 'datetime',
+        'slot_start' => 'datetime:Y-m-d H:i:s',
         'started_at'  => 'datetime',
         'finished_at' => 'datetime',
         'late_cancel' => 'boolean',

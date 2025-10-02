@@ -23,9 +23,9 @@ class DoctorController extends Controller
 
         $doctors = $query
             ->orderBy('id')
-            ->get(['id','user_id','room','avg_duration_min','is_active']);
+            ->get(['id','user_id','room','avg_duration_min','is_active','photo_url']);
 
-        return Inertia::render('Doctors/Index', [
+        return \Inertia\Inertia::render('Doctors/Index', [
             'doctors'      => $doctors,
             'selectedSpec' => $specialtyId,
         ]);

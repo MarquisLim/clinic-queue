@@ -8,6 +8,7 @@ use App\Models\Doctor;
 use App\Rules\SlotBelongsToDoctorRule;
 use App\Rules\SlotNotInPastRule;
 use App\Rules\SlotNotTakenRule;
+use App\Services\QueueService;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -26,6 +27,12 @@ class AppointmentController extends Controller
             ->orderBy('slot_start')
             ->get();
 
+        $qs = app(QueueService::class);
+        $upcoming->transform(function ($a) use ($qs) {
+            $a->queue_position = $qs->position($a);
+            return $a;
+        });
+
         $history = Appointment::query()
             ->with(['doctor.user:id,name'])
             ->where('patient_id', $user->id)
@@ -43,15 +50,23 @@ class AppointmentController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'doctor_id'  => ['required','integer','exists:doctors,id'],
-            'slot_start' => ['required','date'], // ISO строка
-            'slot_len'   => ['nullable','integer','min:5','max:180'],
+            'doctor_id'    => ['required','integer','exists:doctors,id'],
+            'specialty_id' => ['required','integer','exists:specialties,id'],
+            'slot_start'   => ['required','date'],
+            'slot_len'     => ['nullable','integer','min:5','max:180'],
         ]);
 
         $doctorId  = (int) $request->doctor_id;
-        $slotStart = CarbonImmutable::parse($request->slot_start);
+        $specId    = (int) $request->specialty_id;
+        $slotStart = CarbonImmutable::parse($request->slot_start, config('app.timezone'));
 
-        // проверки через правила
+
+        $doctor = Doctor::with('specialties:id')->findOrFail($doctorId);
+        $hasSpec = $doctor->specialties->contains('id', $specId);
+        if (!$hasSpec) {
+            return back()->withErrors(['specialty_id' => 'У врача нет выбранной специальности.'])->withInput();
+        }
+
         $request->validate([
             'slot_start' => [
                 new SlotBelongsToDoctorRule($doctorId),
@@ -63,14 +78,13 @@ class AppointmentController extends Controller
         $user = $request->user();
 
         try {
-            $appt = DB::transaction(function () use ($user, $doctorId, $slotStart, $request) {
-                $slotLen = $request->integer('slot_len') ?:  (int) optional(
-                    Doctor::find($doctorId)
-                )->avg_duration_min ?: 15;
+            $appt = DB::transaction(function () use ($user, $doctorId, $specId, $slotStart, $request, $doctor) {
+                $slotLen = $request->integer('slot_len') ?: ((int) $doctor->avg_duration_min ?: 15);
 
                 return Appointment::create([
                     'patient_id'    => $user->id,
                     'doctor_id'     => $doctorId,
+                    'specialty_id'  => $specId,
                     'slot_start'    => $slotStart,
                     'slot_len_min'  => $slotLen,
                     'status'        => 'pending',
@@ -78,7 +92,12 @@ class AppointmentController extends Controller
                     'complaint'     => (string) $request->input('complaint', ''),
                 ]);
             });
-        } catch (\Throwable $e) {
+        }  catch (\Throwable $e) {
+            \Log::warning('Appointment store fail', [
+                'doctor_id' => $doctorId,
+                'slot_start'=> (string)$slotStart,
+                'msg'       => $e->getMessage(),
+            ]);
             return back()->withErrors(['slot_start' => 'Слот уже занят или недоступен.'])->withInput();
         }
 
@@ -89,12 +108,28 @@ class AppointmentController extends Controller
     {
         $this->authorize('update', $appointment);
 
-        $late = now()->diffInMinutes($appointment->slot_start, false) < 10;
+        if ($appointment->status === 'cancelled') {
+            return back()->with('ok', 'Запись уже отменена.');
+        }
 
-        $appointment->update([
-            'status' => 'cancelled',
-            'late_cancel' => $late,
-        ]);
+        $limitMin = 10;
+        if (now()->diffInMinutes($appointment->slot_start, false) < $limitMin) {
+            return back()->withErrors([
+                'appointment' => "Отменить запись можно не позднее чем за {$limitMin} минут."
+            ]);
+        }
+
+        DB::transaction(function () use ($appointment) {
+            $a = Appointment::whereKey($appointment->id)->lockForUpdate()->first();
+            if ($a->status !== 'cancelled') {
+                $a->update([
+                    'status' => 'cancelled',
+                    'late_cancel' => false,
+                ]);
+            }
+        });
+
+//        event(new \App\Events\AppointmentCancelled($appointment));
 
         return back()->with('ok', 'Запись отменена.');
     }

@@ -79,6 +79,7 @@ function handleImageError() {
                                 Register
                             </Link>
                         </template>
+                        <button class="btn">Button</button>
                     </nav>
                 </header>
 

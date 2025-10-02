@@ -33,14 +33,14 @@ class SlotService
         $start   = CarbonImmutable::parse($date.' '.$sch->start_time);
         $end     = CarbonImmutable::parse($date.' '.$sch->end_time);
 
-        // Перерывы
+        // breaks
         $breaks = collect($sch->breaks ?? [])
             ->map(fn($b) => [
                 'start' => CarbonImmutable::parse($date.' '.$b['start']),
                 'end'   => CarbonImmutable::parse($date.' '.$b['end']),
             ]);
 
-        // Уже занятые слоты
+        // Busy slots
         $taken = Appointment::query()
             ->where('doctor_id', $doctor->id)
             ->whereDate('slot_start', $date)
@@ -70,5 +70,15 @@ class SlotService
         }
 
         return ['slots' => $slots, 'closed' => false];
+    }
+
+    public function hasAnySlot(Doctor $doctor, string $date): bool
+    {
+        $data = $this->forDoctorDate($doctor, $date);
+        if (!empty($data['closed'])) return false;
+        foreach ($data['slots'] as $s) {
+            if (!empty($s['available'])) return true;
+        }
+        return false;
     }
 }

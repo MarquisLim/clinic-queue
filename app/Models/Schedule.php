@@ -8,13 +8,16 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class Schedule extends Model
 {
     protected $fillable = [
-        'doctor_id','date','start_time','end_time','slot_len_min','breaks','is_closed','closed_reason',
+        'doctor_id','date','start_time','end_time','slot_len_min',
+        'breaks','is_closed','closed_reason',
     ];
 
     protected $casts = [
-        'date'      => 'date',
-        'breaks'    => 'array',
-        'is_closed' => 'boolean',
+        'date'       => 'date',
+        'breaks'     => 'array',
+        'is_closed'  => 'boolean',
+        'start_time' => 'string',
+        'end_time'   => 'string',
     ];
 
     public function doctor(): BelongsTo

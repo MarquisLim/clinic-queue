@@ -13,7 +13,7 @@ class SpecialtyController extends Controller
     {
         $items = Specialty::query()
             ->orderBy('name')
-            ->get(['id','name']);
+            ->get(['id','name','description','image_url']);
 
         return Inertia::render('Specialties/Index', [
             'items' => $items,
