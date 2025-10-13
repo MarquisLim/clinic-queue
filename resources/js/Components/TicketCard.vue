@@ -1,10 +1,18 @@
 <script setup>
 import { Link } from '@inertiajs/vue3';
+import { useQueueUpdates } from '@/composables/useQueueUpdates';
+import { ref, onMounted } from 'vue';
 
 const props = defineProps({
     appointment: { type: Object, required: true }, // { id, slot_start, status, ticket_no, doctor:{user:{name}} }
     history: { type: Boolean, default: false }
 });
+
+// Используем real-time обновления только для активных записей
+const { isConnected } = useQueueUpdates(
+    props.history ? null : props.appointment.patient_id,
+    props.history ? null : props.appointment.doctor_id
+);
 
 function formatDateTime(str) {
     if (!str) return '';
@@ -67,6 +75,9 @@ function statusClass(s) {
                 </div>
                 <div v-if="appointment.queue_position" class="badge badge-outline">
                     Ваша позиция: {{ appointment.queue_position }}
+                </div>
+                <div v-if="!history && isConnected" class="badge badge-success badge-sm">
+                    🔴 Live
                 </div>
             </div>
 

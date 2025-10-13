@@ -63,4 +63,19 @@ class User extends Authenticatable
     public function isPatient(): bool  { return $this->hasRole('patient'); }
     public function isRegistrar(): bool{ return $this->hasRole('registrar'); }
     public function isAdmin(): bool    { return $this->hasRole('admin'); }
+
+    /**
+     * Get the attributes that should be appended to the model's array form.
+     *
+     * @return array<string, string>
+     */
+    protected function appends(): array
+    {
+        return [
+            'is_doctor',
+            'is_patient', 
+            'is_registrar',
+            'is_admin',
+        ];
+    }
 }

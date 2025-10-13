@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers\Web;
 
+use App\Events\AppointmentCreated;
+use App\Events\AppointmentCancelled;
 use App\Http\Controllers\Controller;
 use App\Models\Appointment;
 use App\Models\Doctor;
@@ -81,7 +83,7 @@ class AppointmentController extends Controller
             $appt = DB::transaction(function () use ($user, $doctorId, $specId, $slotStart, $request, $doctor) {
                 $slotLen = $request->integer('slot_len') ?: ((int) $doctor->avg_duration_min ?: 15);
 
-                return Appointment::create([
+                $appointment = Appointment::create([
                     'patient_id'    => $user->id,
                     'doctor_id'     => $doctorId,
                     'specialty_id'  => $specId,
@@ -91,6 +93,10 @@ class AppointmentController extends Controller
                     'ticket_no'     => $this->generateTicket($doctorId, $slotStart),
                     'complaint'     => (string) $request->input('complaint', ''),
                 ]);
+
+                event(new AppointmentCreated($appointment));
+
+                return $appointment;
             });
         }  catch (\Throwable $e) {
             \Log::warning('Appointment store fail', [
@@ -126,10 +132,10 @@ class AppointmentController extends Controller
                     'status' => 'cancelled',
                     'late_cancel' => false,
                 ]);
+                
+                event(new AppointmentCancelled($a));
             }
         });
-
-//        event(new \App\Events\AppointmentCancelled($appointment));
 
         return back()->with('ok', 'Запись отменена.');
     }

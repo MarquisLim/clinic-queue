@@ -54,7 +54,23 @@ const user = page.props.auth?.user || null;
                     <ul
                         tabindex="0"
                         class="menu menu-sm dropdown-content bg-base-100 rounded-box z-[1] mt-3 w-48 p-2 shadow">
-                        <li><Link href="/appointments/mine">Записи</Link></li>
+                        <li><Link href="/appointments/mine">Мои записи</Link></li>
+                        
+                        <!-- Панель врача -->
+                        <li v-if="user?.is_doctor">
+                            <Link href="/doctor/panel">Панель врача</Link>
+                        </li>
+                        
+                        <!-- Панель регистратора -->
+                        <li v-if="user?.is_registrar || user?.is_admin">
+                            <Link href="/registrar/panel">Панель регистратора</Link>
+                        </li>
+                        
+                        <!-- Тестирование (только для разработки) -->
+                        <li v-if="user?.is_admin">
+                            <Link href="/test/pusher">Тест Pusher</Link>
+                        </li>
+                        
                         <li><Link href="/profile">Профиль</Link></li>
                         <li><Link href="/settings">Настройки</Link></li>
                         <li>

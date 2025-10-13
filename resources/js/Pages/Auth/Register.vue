@@ -1,9 +1,5 @@
 <script setup>
-import GuestLayout from '@/Layouts/GuestLayout.vue';
-import InputError from '@/Components/InputError.vue';
-import InputLabel from '@/Components/InputLabel.vue';
-import PrimaryButton from '@/Components/PrimaryButton.vue';
-import TextInput from '@/Components/TextInput.vue';
+import AppLayout from '@/Layouts/AppLayout.vue';
 import { Head, Link, useForm } from '@inertiajs/vue3';
 
 const form = useForm({
@@ -21,93 +17,135 @@ const submit = () => {
 </script>
 
 <template>
-    <GuestLayout>
-        <Head title="Register" />
+    <AppLayout title="Регистрация">
+        <div class="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+            <div class="max-w-md w-full space-y-8">
+                <!-- Заголовок -->
+                <div class="text-center">
+                    <h2 class="text-3xl font-bold text-base-content">
+                        Регистрация
+                    </h2>
+                    <p class="mt-2 text-base-content/70">
+                        Создайте аккаунт для записи к врачу
+                    </p>
+                </div>
 
-        <form @submit.prevent="submit">
-            <div>
-                <InputLabel for="name" value="Name" />
+                <!-- Форма -->
+                <div class="card bg-base-100 shadow-xl">
+                    <div class="card-body">
+                        <form @submit.prevent="submit" class="space-y-6">
+                            <!-- Name -->
+                            <div class="form-control">
+                                <label class="label">
+                                    <span class="label-text">Имя</span>
+                                </label>
+                                <input
+                                    type="text"
+                                    v-model="form.name"
+                                    class="input input-bordered w-full"
+                                    :class="{ 'input-error': form.errors.name }"
+                                    placeholder="Введите ваше имя"
+                                    required
+                                    autofocus
+                                    autocomplete="name"
+                                />
+                                <label v-if="form.errors.name" class="label">
+                                    <span class="label-text-alt text-error">{{ form.errors.name }}</span>
+                                </label>
+                            </div>
 
-                <TextInput
-                    id="name"
-                    type="text"
-                    class="mt-1 block w-full"
-                    v-model="form.name"
-                    required
-                    autofocus
-                    autocomplete="name"
-                />
+                            <!-- Email -->
+                            <div class="form-control">
+                                <label class="label">
+                                    <span class="label-text">Email</span>
+                                </label>
+                                <input
+                                    type="email"
+                                    v-model="form.email"
+                                    class="input input-bordered w-full"
+                                    :class="{ 'input-error': form.errors.email }"
+                                    placeholder="Введите ваш email"
+                                    required
+                                    autocomplete="username"
+                                />
+                                <label v-if="form.errors.email" class="label">
+                                    <span class="label-text-alt text-error">{{ form.errors.email }}</span>
+                                </label>
+                            </div>
 
-                <InputError class="mt-2" :message="form.errors.name" />
+                            <!-- Password -->
+                            <div class="form-control">
+                                <label class="label">
+                                    <span class="label-text">Пароль</span>
+                                </label>
+                                <input
+                                    type="password"
+                                    v-model="form.password"
+                                    class="input input-bordered w-full"
+                                    :class="{ 'input-error': form.errors.password }"
+                                    placeholder="Введите пароль"
+                                    required
+                                    autocomplete="new-password"
+                                />
+                                <label v-if="form.errors.password" class="label">
+                                    <span class="label-text-alt text-error">{{ form.errors.password }}</span>
+                                </label>
+                            </div>
+
+                            <!-- Password Confirmation -->
+                            <div class="form-control">
+                                <label class="label">
+                                    <span class="label-text">Подтверждение пароля</span>
+                                </label>
+                                <input
+                                    type="password"
+                                    v-model="form.password_confirmation"
+                                    class="input input-bordered w-full"
+                                    :class="{ 'input-error': form.errors.password_confirmation }"
+                                    placeholder="Подтвердите пароль"
+                                    required
+                                    autocomplete="new-password"
+                                />
+                                <label v-if="form.errors.password_confirmation" class="label">
+                                    <span class="label-text-alt text-error">{{ form.errors.password_confirmation }}</span>
+                                </label>
+                            </div>
+
+                            <!-- Submit button -->
+                            <div class="form-control">
+                                <button
+                                    type="submit"
+                                    class="btn btn-primary w-full"
+                                    :class="{ 'loading': form.processing }"
+                                    :disabled="form.processing"
+                                >
+                                    <svg v-if="!form.processing" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                                    </svg>
+                                    {{ form.processing ? 'Регистрация...' : 'Зарегистрироваться' }}
+                                </button>
+                            </div>
+
+                            <!-- Links -->
+                            <div class="text-center">
+                                <div class="text-sm text-base-content/70">
+                                    Уже есть аккаунт? 
+                                    <Link :href="route('login')" class="link link-primary">
+                                        Войти
+                                    </Link>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Back to home -->
+                <div class="text-center">
+                    <Link href="/" class="link link-primary">
+                        ← Вернуться на главную
+                    </Link>
+                </div>
             </div>
-
-            <div class="mt-4">
-                <InputLabel for="email" value="Email" />
-
-                <TextInput
-                    id="email"
-                    type="email"
-                    class="mt-1 block w-full"
-                    v-model="form.email"
-                    required
-                    autocomplete="username"
-                />
-
-                <InputError class="mt-2" :message="form.errors.email" />
-            </div>
-
-            <div class="mt-4">
-                <InputLabel for="password" value="Password" />
-
-                <TextInput
-                    id="password"
-                    type="password"
-                    class="mt-1 block w-full"
-                    v-model="form.password"
-                    required
-                    autocomplete="new-password"
-                />
-
-                <InputError class="mt-2" :message="form.errors.password" />
-            </div>
-
-            <div class="mt-4">
-                <InputLabel
-                    for="password_confirmation"
-                    value="Confirm Password"
-                />
-
-                <TextInput
-                    id="password_confirmation"
-                    type="password"
-                    class="mt-1 block w-full"
-                    v-model="form.password_confirmation"
-                    required
-                    autocomplete="new-password"
-                />
-
-                <InputError
-                    class="mt-2"
-                    :message="form.errors.password_confirmation"
-                />
-            </div>
-
-            <div class="mt-4 flex items-center justify-end">
-                <Link
-                    :href="route('login')"
-                    class="rounded-md text-sm text-gray-600 underline hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
-                >
-                    Already registered?
-                </Link>
-
-                <PrimaryButton
-                    class="ms-4"
-                    :class="{ 'opacity-25': form.processing }"
-                    :disabled="form.processing"
-                >
-                    Register
-                </PrimaryButton>
-            </div>
-        </form>
-    </GuestLayout>
+        </div>
+    </AppLayout>
 </template>

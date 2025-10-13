@@ -22,7 +22,9 @@
         "vue": "^3.4.0"
     },
     "dependencies": {
+        "laravel-echo": "^2.2.4",
         "pinia": "^3.0.3",
+        "pusher-js": "^8.4.0",
         "ziggy-js": "^2.6.0"
     }
 }
