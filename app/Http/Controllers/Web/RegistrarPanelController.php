@@ -28,7 +28,7 @@ class RegistrarPanelController extends Controller
     public function index(Request $request)
     {
         $doctors = Doctor::query()
-            ->with(['user:id,name', 'specialties:id,name'])
+            ->with(['user:id,name', 'specialty:id,name'])
             ->active()
             ->get();
 

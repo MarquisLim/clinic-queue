@@ -16,7 +16,7 @@ class DashboardController extends Controller
         $stats = [
             'specialties_count' => Specialty::count(),
             'doctors_count' => Doctor::with('user')->count(),
-            'featured_specialties' => Specialty::with('doctors')->take(6)->get(),
+            'featured_specialties' => Specialty::take(6)->get(),
         ];
 
         return Inertia::render('Dashboard/Index', [

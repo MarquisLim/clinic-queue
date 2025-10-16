@@ -35,6 +35,7 @@ class AppointmentCreated implements ShouldBroadcast
         return [
             new Channel('appointments'),
             new Channel('doctor.' . $this->appointment->doctor_id),
+            new Channel('patient.' . $this->appointment->patient_id),
         ];
     }
 

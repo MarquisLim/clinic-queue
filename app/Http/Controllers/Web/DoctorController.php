@@ -14,16 +14,16 @@ class DoctorController extends Controller
         $specialtyId = $request->integer('specialty_id');
 
         $query = Doctor::query()
-            ->with(['user:id,name', 'specialties:id,name'])
+            ->with(['user:id,name', 'specialty:id,name'])
             ->where('is_active', true);
 
         if ($specialtyId) {
-            $query->whereHas('specialties', fn($q) => $q->where('specialty_id', $specialtyId));
+            $query->where('speciality_id', $specialtyId);
         }
 
         $doctors = $query
             ->orderBy('id')
-            ->get(['id','user_id','room','avg_duration_min','is_active','photo_url']);
+            ->get(['id','user_id','speciality_id','room','avg_duration_min','is_active','photo_url']);
 
         return \Inertia\Inertia::render('Doctors/Index', [
             'doctors'      => $doctors,

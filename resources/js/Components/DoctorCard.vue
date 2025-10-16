@@ -8,8 +8,7 @@ const props = defineProps({
 });
 
 const activeSpecialtyId = computed(() => {
-    return props.selectedSpecId
-        ?? (props.doctor.specialties?.[0]?.id ?? null);
+    return props.selectedSpecId || props.doctor.speciality_id;
 });
 
 const days = ref([]);           // [{date, label, weekday, available}]
@@ -23,7 +22,7 @@ const showModal = ref(false);
 const pickedSlot = ref(null);
 
 const specText = computed(() =>
-    (props.doctor.specialties || []).map(s => s.name).join(' · ')
+    props.doctor.specialty?.name || ''
 );
 
 function fmtWeekday(d) {
@@ -81,7 +80,7 @@ function confirmBooking() {
     const slotLocal = `${selectedDate.value} ${pickedSlot.value.start}:00`;
     const specialty_id = activeSpecialtyId.value;
     if (!specialty_id) {
-        alert('Не найдена специальность для записи (укажите specialty_id).');
+        alert('Не найдена специальность для записи. Обратитесь к администратору.');
         return;
     }
     router.post(

@@ -56,7 +56,7 @@ function formatDateTime(str) {
 }
 
 function getSpecialtiesText(doctor) {
-    return doctor.specialties.map(s => s.name).join(', ');
+    return doctor.specialty?.name || '';
 }
 </script>
 

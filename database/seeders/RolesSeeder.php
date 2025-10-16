@@ -16,6 +16,5 @@ class RolesSeeder extends Seeder
         Role::firstOrCreate(['name' => 'patient']);
         Role::firstOrCreate(['name' => 'doctor']);
         Role::firstOrCreate(['name' => 'registrar']);
-        Role::firstOrCreate(['name' => 'admin']);
     }
 }

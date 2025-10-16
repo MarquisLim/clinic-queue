@@ -1,8 +1,10 @@
 import { ref, onMounted, onUnmounted } from 'vue';
+import { router } from '@inertiajs/vue3';
 
 export function useQueueUpdates(userId, doctorId = null) {
     const queuePosition = ref(null);
     const isConnected = ref(false);
+    const lastUpdateTime = ref(null);
 
     let echo = null;
 
@@ -35,6 +37,14 @@ export function useQueueUpdates(userId, doctorId = null) {
                     .listen('.status.changed', (e) => {
                         console.log('Patient status changed:', e);
                         updateQueuePosition(e);
+                    })
+                    .listen('.appointment.created', (e) => {
+                        console.log('Patient appointment created:', e);
+                        updateQueuePosition(e);
+                    })
+                    .listen('.appointment.cancelled', (e) => {
+                        console.log('Patient appointment cancelled:', e);
+                        updateQueuePosition(e);
                     });
             }
 
@@ -62,20 +72,31 @@ export function useQueueUpdates(userId, doctorId = null) {
     });
 
     function updateQueuePosition(event) {
-        // Здесь можно добавить логику для обновления позиции в очереди
-        // Например, перезагрузить данные или обновить состояние
         console.log('Updating queue position based on event:', event);
+        
+        // Обновляем время последнего обновления
+        lastUpdateTime.value = new Date().toISOString();
+        
+        // Обновляем данные страницы без полной перезагрузки
+        if (event.appointment_id) {
+            // Для событий с appointment_id обновляем только данные
+            refreshQueueData();
+        }
     }
 
     function refreshQueueData() {
-        // Метод для принудительного обновления данных очереди
-        // Можно использовать для перезагрузки данных после получения события
-        window.location.reload();
+        // Обновляем данные страницы через Inertia без полной перезагрузки
+        router.reload({
+            only: ['appointments', 'doctors', 'upcoming', 'history'], // Обновляем только нужные данные
+            preserveState: true,
+            preserveScroll: true,
+        });
     }
 
     return {
         queuePosition,
         isConnected,
+        lastUpdateTime,
         updateQueuePosition,
         refreshQueueData
     };

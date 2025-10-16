@@ -62,13 +62,8 @@ const user = page.props.auth?.user || null;
                         </li>
                         
                         <!-- Панель регистратора -->
-                        <li v-if="user?.is_registrar || user?.is_admin">
+                        <li v-if="user?.is_registrar">
                             <Link href="/registrar/panel">Панель регистратора</Link>
-                        </li>
-                        
-                        <!-- Тестирование (только для разработки) -->
-                        <li v-if="user?.is_admin">
-                            <Link href="/test/pusher">Тест Pusher</Link>
                         </li>
                         
                         <li><Link href="/profile">Профиль</Link></li>

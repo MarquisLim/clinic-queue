@@ -1,12 +1,13 @@
 <?php
 
 use App\Http\Controllers\ProfileController;
-use App\Http\Controllers\TestPusherController;
 use App\Http\Controllers\Web\AppointmentController;
 use App\Http\Controllers\Web\DashboardController;
 use App\Http\Controllers\Web\DoctorController;
 use App\Http\Controllers\Web\DoctorPanelController;
+use App\Http\Controllers\Web\ProfileController as WebProfileController;
 use App\Http\Controllers\Web\RegistrarPanelController;
+use App\Http\Controllers\Web\SettingsController;
 use App\Http\Controllers\Web\SlotController;
 use App\Http\Controllers\Web\SpecialtyController;
 use Illuminate\Foundation\Application;
@@ -19,18 +20,6 @@ Route::get('/', [DashboardController::class, 'index'])->name('home');
 // Дашборд для авторизованных пользователей
 Route::get('/dashboard', [DashboardController::class, 'dashboard'])->middleware(['auth', 'verified'])->name('dashboard');
 
-// Тестирование Pusher (без авторизации)
-Route::prefix('test')->name('test.')->group(function () {
-    Route::get('/pusher', function () {
-        return Inertia::render('Test/PusherTest');
-    })->name('pusher');
-    Route::get('/pusher/connection', [TestPusherController::class, 'testConnection'])->name('pusher.connection');
-    Route::get('/pusher/appointment', [TestPusherController::class, 'testAppointmentEvent'])->name('pusher.appointment');
-    Route::get('/pusher/config', [TestPusherController::class, 'getConfig'])->name('pusher.config');
-    Route::get('/doctor-panel', function () {
-        return Inertia::render('Test/DoctorPanelTest');
-    })->name('doctor-panel');
-});
 
 Route::middleware(['auth'])->group(function () {
     Route::get('/specialties', [SpecialtyController::class, 'index'])->name('specialties.index');
@@ -56,6 +45,14 @@ Route::middleware(['auth'])->group(function () {
         Route::delete('/appointments/{appointment}/cancel', [RegistrarPanelController::class, 'cancelAppointment'])->name('appointments.cancel');
         Route::get('/status-logs', [RegistrarPanelController::class, 'statusLogs'])->name('status-logs');
     });
+
+    // Профиль и настройки
+    Route::get('/profile', [WebProfileController::class, 'edit'])->name('profile.edit');
+    Route::patch('/profile', [WebProfileController::class, 'update'])->name('profile.update');
+    Route::put('/profile/password', [WebProfileController::class, 'password'])->name('profile.password');
+    Route::delete('/profile', [WebProfileController::class, 'destroy'])->name('profile.destroy');
+    
+    Route::get('/settings', [SettingsController::class, 'index'])->name('settings.index');
 });
 
 require __DIR__.'/auth.php';

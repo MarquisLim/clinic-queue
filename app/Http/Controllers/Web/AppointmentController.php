@@ -63,9 +63,8 @@ class AppointmentController extends Controller
         $slotStart = CarbonImmutable::parse($request->slot_start, config('app.timezone'));
 
 
-        $doctor = Doctor::with('specialties:id')->findOrFail($doctorId);
-        $hasSpec = $doctor->specialties->contains('id', $specId);
-        if (!$hasSpec) {
+        $doctor = Doctor::with('specialty:id')->findOrFail($doctorId);
+        if ($doctor->speciality_id !== $specId) {
             return back()->withErrors(['specialty_id' => 'У врача нет выбранной специальности.'])->withInput();
         }
 

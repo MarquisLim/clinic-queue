@@ -62,7 +62,6 @@ class User extends Authenticatable
     public function isDoctor(): bool   { return $this->hasRole('doctor'); }
     public function isPatient(): bool  { return $this->hasRole('patient'); }
     public function isRegistrar(): bool{ return $this->hasRole('registrar'); }
-    public function isAdmin(): bool    { return $this->hasRole('admin'); }
 
     /**
      * Get the attributes that should be appended to the model's array form.
@@ -75,7 +74,6 @@ class User extends Authenticatable
             'is_doctor',
             'is_patient', 
             'is_registrar',
-            'is_admin',
         ];
     }
 }
