@@ -7,7 +7,9 @@ use App\Http\Controllers\Controller;
 use App\Models\Appointment;
 use App\Models\Doctor;
 use App\Models\StatusLog;
+use App\Models\Schedule;
 use App\Services\QueueService;
+use App\Services\SlotService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
@@ -143,6 +145,105 @@ class RegistrarPanelController extends Controller
         return Inertia::render('Registrar/StatusLogs', [
             'logs' => $logs,
         ]);
+    }
+
+    /**
+     * Получить доступные слоты для переназначения
+     */
+    public function getAvailableSlots(Request $request)
+    {
+        $request->validate([
+            'appointment_id' => 'required|exists:appointments,id',
+            'date' => 'required|date|after_or_equal:today',
+        ]);
+
+        $appointment = Appointment::with(['doctor.specialty'])->findOrFail($request->appointment_id);
+        
+        // Получаем врачей той же специальности
+        $doctors = Doctor::with(['user', 'specialty'])
+            ->where('specialty_id', $appointment->doctor->specialty_id)
+            ->active()
+            ->get();
+
+        $slotService = app(SlotService::class);
+        $availableSlots = [];
+
+        foreach ($doctors as $doctor) {
+            $slots = $slotService->getAvailableSlots($doctor->id, $request->date);
+            if (!empty($slots)) {
+                $availableSlots[] = [
+                    'doctor' => $doctor,
+                    'slots' => $slots
+                ];
+            }
+        }
+
+        return response()->json($availableSlots);
+    }
+
+    /**
+     * Переназначить запись
+     */
+    public function rescheduleAppointment(Request $request, Appointment $appointment)
+    {
+        $request->validate([
+            'doctor_id' => 'required|exists:doctors,id',
+            'slot_start' => 'required|date',
+            'slot_end' => 'required|date|after:slot_start',
+        ]);
+
+        // Проверяем, что новый слот доступен
+        $slotService = app(SlotService::class);
+        $isAvailable = $slotService->isSlotAvailable(
+            $request->doctor_id,
+            $request->slot_start,
+            $request->slot_end
+        );
+
+        if (!$isAvailable) {
+            return response()->json(['error' => 'Выбранный слот недоступен'], 422);
+        }
+
+        // Проверяем, что новый слот не в прошлом
+        if (now()->gt($request->slot_start)) {
+            return response()->json(['error' => 'Нельзя переносить запись в прошлое'], 422);
+        }
+
+        // Проверяем, что новый врач той же специальности
+        $newDoctor = Doctor::findOrFail($request->doctor_id);
+        if ($newDoctor->specialty_id !== $appointment->doctor->specialty_id) {
+            return response()->json(['error' => 'Врач должен быть той же специальности'], 422);
+        }
+
+        DB::transaction(function () use ($appointment, $request) {
+            // Обновляем запись
+            $oldDoctor = $appointment->doctor;
+            $oldSlotStart = $appointment->slot_start;
+            $oldSlotEnd = $appointment->slot_end;
+
+            $appointment->update([
+                'doctor_id' => $request->doctor_id,
+                'slot_start' => $request->slot_start,
+                'slot_end' => $request->slot_end,
+                'status' => 'pending', // Сбрасываем статус
+                'reminder_sent' => false, // Сбрасываем флаг напоминания
+            ]);
+
+            // Логируем изменение
+            StatusLog::create([
+                'appointment_id' => $appointment->id,
+                'old_status' => $appointment->getOriginal('status'),
+                'new_status' => 'pending',
+                'changed_by' => auth()->id(),
+                'reason' => 'Переназначение записи',
+                'notes' => "Перенесено с {$oldDoctor->user->name} ({$oldSlotStart}) на {$newDoctor->user->name} ({$request->slot_start})"
+            ]);
+
+            // Отправляем событие
+            broadcast(new AppointmentStatusChanged($appointment, 'rescheduled'));
+        });
+
+        return response()->json(['message' => 'Запись успешно переназначена']);
     }
 }
 

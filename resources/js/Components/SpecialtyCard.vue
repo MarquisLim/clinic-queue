@@ -19,7 +19,7 @@ const props = defineProps({
         </div>
 
         <div class="flex justify-end items-end">
-            <img :src="specialty.image_url" :alt="specialty.name" class="w-20 h-20 object-cover rounded-full shadow" />
+            <img :src="`/storage/${specialty.image_url}`" :alt="specialty.name" class="w-20 h-20 object-cover rounded-full shadow" />
         </div>
     </Link>
 </template>

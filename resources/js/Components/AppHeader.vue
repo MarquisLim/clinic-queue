@@ -66,6 +66,17 @@ const user = page.props.auth?.user || null;
                             <Link href="/registrar/panel">Панель регистратора</Link>
                         </li>
                         
+                        <!-- Админская панель -->
+                        <li v-if="user?.is_admin">
+                            <Link href="/admin">Админ панель</Link>
+                        </li>
+                        
+                        <!-- Админские страницы -->
+                        <li v-if="user?.is_admin"><Link href="/admin/specialties">Специальности</Link></li>
+                        <li v-if="user?.is_admin"><Link href="/admin/doctors">Врачи</Link></li>
+                        <li v-if="user?.is_admin"><Link href="/admin/users">Пользователи</Link></li>
+                        <li v-if="user?.is_admin"><Link href="/admin/schedule">Расписание</Link></li>
+                        
                         <li><Link href="/profile">Профиль</Link></li>
                         <li><Link href="/settings">Настройки</Link></li>
                         <li>

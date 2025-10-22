@@ -3,7 +3,19 @@ import Echo from 'laravel-echo';
 import Pusher from 'pusher-js';
 
 window.axios = axios;
+// Помечаем XHR-запросы, чтобы Laravel корректно определял expectsJson()
 window.axios.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest';
+window.axios.interceptors.response.use(
+    response => response,
+    error => {
+        console.error('AXIOS ERROR:', error);
+        if (error.response) {
+            console.error('Status:', error.response.status);
+            console.error('Data:', error.response.data);
+        }
+        return Promise.reject(error);
+    }
+);
 
 window.Pusher = Pusher;
 

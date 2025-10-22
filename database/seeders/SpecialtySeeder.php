@@ -18,59 +18,59 @@ class SpecialtySeeder extends Seeder
             [
                 'name' => 'Терапевт',
                 'description' => 'Поможет, когда очень нужен доктор',
-                'image_url' => 'https://picsum.photos/400/400?random=100'
+                'image' => 'https://picsum.photos/400/400?random=100'
             ],
             [
                 'name' => 'Педиатр',
                 'description' => 'Быстрая помощь вашему ребёнку',
-                'image_url' => 'https://picsum.photos/400/400?random=101'
+                'image' => 'https://picsum.photos/400/400?random=101'
             ],
             [
                 'name' => 'Хирург',
                 'description' => 'Поможет при травмах и операциях',
-                'image_url' => 'https://picsum.photos/400/400?random=102'
+                'image' => 'https://picsum.photos/400/400?random=102'
             ],
             [
                 'name' => 'Кардиолог',
                 'description' => 'Забота о вашем сердце',
-                'image_url' => 'https://picsum.photos/400/400?random=103'
+                'image' => 'https://picsum.photos/400/400?random=103'
             ],
             [
                 'name' => 'Невролог',
                 'description' => 'Поддержка нервной системы',
-                'image_url' => 'https://picsum.photos/400/400?random=104'
+                'image' => 'https://picsum.photos/400/400?random=104'
             ],
             [
                 'name' => 'Стоматолог',
                 'description' => 'Здоровье и красота ваших зубов',
-                'image_url' => 'https://picsum.photos/400/400?random=105'
+                'image' => 'https://picsum.photos/400/400?random=105'
             ],
             [
                 'name' => 'ЛОР',
                 'description' => 'Поможет при заболеваниях уха, горла и носа',
-                'image_url' => 'https://picsum.photos/400/400?random=106'
+                'image' => 'https://picsum.photos/400/400?random=106'
             ],
             [
                 'name' => 'Офтальмолог',
                 'description' => 'Забота о вашем зрении и глазах',
-                'image_url' => 'https://picsum.photos/400/400?random=107'
+                'image' => 'https://picsum.photos/400/400?random=107'
             ],
             [
                 'name' => 'Ветеринар',
                 'description' => 'Поможет вашему питомцу',
-                'image_url' => 'https://picsum.photos/400/400?random=108'
+                'image' => 'https://picsum.photos/400/400?random=108'
             ],
         ];
 
         foreach ($specialties as $spec) {
             // Скачиваем и сохраняем изображение специальности
-            $imagePath = $this->downloadAndSaveImage($spec['image_url'], 'specialties', $spec['name']);
+            $imagePath = $this->downloadAndSaveImage($spec['image'], 'specialties', $spec['name']);
 
             Specialty::updateOrCreate(
                 ['name' => $spec['name']], // ищем по имени
                 [
                     'description' => $spec['description'],
-                    'image_url'   => $imagePath,
+                    'image_url' => $imagePath,
                 ]
             );
         }
@@ -92,7 +92,7 @@ class SpecialtySeeder extends Seeder
             
             Storage::disk('public')->put($path, $contents);
             
-            return Storage::url($path);
+            return $path;
         } catch (\Exception $e) {
             // Если не удалось скачать, используем fallback
             \Log::warning("Не удалось скачать изображение для специальности {$name}: " . $e->getMessage());

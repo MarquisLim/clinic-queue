@@ -4,6 +4,7 @@ import './bootstrap';
 import { createInertiaApp } from '@inertiajs/vue3';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import { createApp, h } from 'vue';
+import { router } from '@inertiajs/vue3'
 import { ZiggyVue } from '../../vendor/tightenco/ziggy';
 
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
@@ -34,6 +35,11 @@ createInertiaApp({
             import.meta.glob('./Pages/**/*.vue'),
         ),
     setup({ el, App, props, plugin }) {
+        // Глобальный перехват ошибок Inertia
+        router.on('error', (errors) => {
+            console.error('Inertia Error:', errors)
+        })
+
         return createApp({ render: () => h(App, props) })
             .use(plugin)
             .use(ZiggyVue)

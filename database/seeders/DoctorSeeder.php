@@ -204,7 +204,7 @@ class DoctorSeeder extends Seeder
             
             Storage::disk('public')->put($path, $contents);
             
-            return Storage::url($path);
+            return $path;
         } catch (\Exception $e) {
             // Если не удалось скачать, используем fallback
             \Log::warning("Не удалось скачать фото для {$name}: " . $e->getMessage());

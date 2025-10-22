@@ -62,6 +62,13 @@ class User extends Authenticatable
     public function isDoctor(): bool   { return $this->hasRole('doctor'); }
     public function isPatient(): bool  { return $this->hasRole('patient'); }
     public function isRegistrar(): bool{ return $this->hasRole('registrar'); }
+    public function isAdmin(): bool    { return $this->hasRole('admin'); }
+
+    // Аксессоры для JSON
+    public function getIsDoctorAttribute(): bool { return $this->isDoctor(); }
+    public function getIsPatientAttribute(): bool { return $this->isPatient(); }
+    public function getIsRegistrarAttribute(): bool { return $this->isRegistrar(); }
+    public function getIsAdminAttribute(): bool { return $this->isAdmin(); }
 
     /**
      * Get the attributes that should be appended to the model's array form.
@@ -74,6 +81,7 @@ class User extends Authenticatable
             'is_doctor',
             'is_patient', 
             'is_registrar',
+            'is_admin',
         ];
     }
 }
