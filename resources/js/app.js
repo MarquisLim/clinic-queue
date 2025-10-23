@@ -7,6 +7,11 @@ import { createApp, h } from 'vue';
 import { router } from '@inertiajs/vue3'
 import { ZiggyVue } from '../../vendor/tightenco/ziggy';
 
+// Добавляем CSRF токен в глобальную область
+window.Laravel = {
+    csrfToken: document.querySelector('meta[name="csrf-token"]')?.getAttribute('content')
+};
+
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
 
 function getInitialTheme() {

@@ -23,3 +23,8 @@ Broadcast::channel('patient.{patientId}', function ($user, $patientId) {
     return $user->hasRole(['patient', 'doctor', 'registrar']) || 
            $user->id == $patientId;
 });
+
+// Канал для уведомлений конкретного пользователя
+Broadcast::channel('notifications.{userId}', function ($user, $userId) {
+    return $user->id == $userId;
+});

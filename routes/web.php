@@ -12,6 +12,7 @@ use App\Http\Controllers\Web\SlotController;
 use App\Http\Controllers\Web\SpecialtyController;
 use App\Http\Controllers\Web\Admin\AdminController;
 use App\Http\Controllers\Web\Admin\ScheduleController;
+use App\Http\Controllers\Web\NotificationController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -58,6 +59,16 @@ Route::middleware(['auth'])->group(function () {
 
     Route::get('/settings', [SettingsController::class, 'index'])->name('settings.index');
 
+    // Уведомления
+    Route::prefix('notifications')->name('notifications.')->group(function () {
+        Route::get('/', [NotificationController::class, 'index'])->name('index');
+        Route::post('/{id}/read', [NotificationController::class, 'markAsRead'])->name('mark-read');
+        Route::post('/mark-all-read', [NotificationController::class, 'markAllAsRead'])->name('mark-all-read');
+        Route::delete('/{id}', [NotificationController::class, 'destroy'])->name('destroy');
+        Route::get('/unread-count', [NotificationController::class, 'unreadCount'])->name('unread-count');
+        Route::get('/recent', [NotificationController::class, 'recent'])->name('recent');
+    });
+
     // Админские маршруты
     Route::prefix('admin')->name('admin.')->middleware('can:admin')->group(function () {
         Route::get('/', [AdminController::class, 'index'])->name('index');
@@ -82,6 +93,9 @@ Route::middleware(['auth'])->group(function () {
         Route::put('/schedule/{schedule}', [ScheduleController::class, 'update'])->name('schedule.update');
         Route::delete('/schedule/{schedule}', [ScheduleController::class, 'destroy'])->name('schedule.destroy');
         Route::post('/schedule/generate', [ScheduleController::class, 'generateWeek'])->name('schedule.generate');
+        Route::get('/schedule/stats', [ScheduleController::class, 'getStats'])->name('schedule.stats');
+        Route::post('/schedule/copy-week', [ScheduleController::class, 'copyWeek'])->name('schedule.copy-week');
+        Route::get('/schedule/available-slots', [ScheduleController::class, 'getAvailableSlots'])->name('schedule.available-slots');
     });
 });
 
@@ -91,6 +105,19 @@ Route::get('/debug', function () {
         'debug' => config('app.debug'),
     ];
 });
+
+// Тестовая страница для уведомлений
+Route::get('/test-notifications', function () {
+    return Inertia\Inertia::render('TestNotifications');
+})->middleware('auth');
+
+// Тестовая страница для расписания
+Route::get('/test-schedule', function () {
+    $doctors = \App\Models\Doctor::with(['user', 'specialty'])->get();
+    return Inertia\Inertia::render('TestSchedule', [
+        'doctors' => $doctors
+    ]);
+})->middleware('auth');
 
 
 require __DIR__.'/auth.php';

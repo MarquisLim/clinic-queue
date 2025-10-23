@@ -26,7 +26,7 @@ class Appointment extends Model
         'slot_start','slot_len_min',
         'status','ticket_no',
         'late_cancel','complaint',
-        'started_at','finished_at',
+        'started_at','finished_at','reminder_sent',
     ];
 
     protected $casts = [
@@ -34,6 +34,7 @@ class Appointment extends Model
         'started_at'  => 'datetime',
         'finished_at' => 'datetime',
         'late_cancel' => 'boolean',
+        'reminder_sent' => 'boolean',
     ];
 
     public function patient(): BelongsTo

@@ -2,6 +2,7 @@
 <script setup>
 import { Link, usePage } from '@inertiajs/vue3';
 import ThemeToggle from "@/Components/ThemeToggle.vue";
+import NotificationBell from "@/Components/NotificationBell.vue";
 
 const page = usePage();
 const user = page.props.auth?.user || null;
@@ -42,6 +43,9 @@ const user = page.props.auth?.user || null;
             </template>
 
             <template v-else>
+                <!-- Уведомления -->
+                <NotificationBell />
+                
                 <div class="dropdown dropdown-end">
                     <div tabindex="0" role="button" class="btn btn-ghost normal-case">
                         <span class="mr-2">{{ user.name }}</span>
