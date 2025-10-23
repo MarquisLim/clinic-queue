@@ -42,7 +42,7 @@
                     <div class="avatar mb-4">
                         <div class="w-24 h-24 rounded-full ring ring-primary ring-offset-base-100 ring-offset-2 overflow-hidden">
                             <img v-if="doctor.photo_url" :src="storageUrl(doctor.photo_url)" :alt="doctor.user?.name || 'Врач'" class="w-full h-full object-cover" />
-                            <img v-else-if="doctor.specialty?.image" :src="storageUrl(doctor.specialty.image)" :alt="doctor.specialty?.name || 'Специальность'" class="w-full h-full object-cover" />
+                            <img v-else-if="doctor.specialty?.image_url" :src="storageUrl(doctor.specialty.image_url)" :alt="doctor.specialty?.name || 'Специальность'" class="w-full h-full object-cover" />
                             <div v-else class="w-full h-full bg-primary text-primary-content flex items-center justify-center text-2xl font-bold">
                                 {{ (doctor.user?.name || 'В').charAt(0).toUpperCase() }}
                             </div>
@@ -50,7 +50,7 @@
                     </div>
                     <h2 class="card-title justify-center">{{ doctor.user?.name || 'Без имени' }}</h2>
                     <p class="text-sm text-gray-600 flex items-center justify-center gap-2">
-                        <img v-if="doctor.specialty?.image" :src="storageUrl(doctor.specialty.image)" alt="" class="w-5 h-5 rounded" />
+                        <img v-if="doctor.specialty?.image_url" :src="storageUrl(doctor.specialty.image_url)" alt="" class="w-5 h-5 rounded" />
                         <span>{{ doctor.specialty?.name || 'Специальность не указана' }}</span>
                     </p>
                     <div class="space-y-2">

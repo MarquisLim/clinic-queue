@@ -95,7 +95,7 @@ class AdminController extends Controller
             ->with([
                 'roles:id,name',
                 'doctor:id,user_id,speciality_id,photo_url',
-                'doctor.specialty:id,name,image',
+                'doctor.specialty:id,name,image_url',
             ])
             ->when($search !== '', function ($q) use ($search) {
                 $q->where(function ($w) use ($search) {
@@ -136,7 +136,7 @@ class AdminController extends Controller
 
         if ($request->hasFile('image')) {
             $path = $request->file('image')->store('specialties', 'public');
-            $specialty->update(['image' => $path]);
+            $specialty->update(['image_url' => $path]);
         }
 
         return redirect()->route('admin.specialties')->with('success', 'Специальность создана');
@@ -156,11 +156,11 @@ class AdminController extends Controller
         ]);
 
         if ($request->hasFile('image')) {
-            if ($specialty->image) {
-                Storage::disk('public')->delete($specialty->image);
+            if ($specialty->image_url) {
+                Storage::disk('public')->delete($specialty->image_url);
             }
             $path = $request->file('image')->store('specialties', 'public');
-            $specialty->update(['image' => $path]);
+            $specialty->update(['image_url' => $path]);
         }
 
         return redirect()->route('admin.specialties')->with('success', 'Специальность обновлена');
@@ -172,8 +172,8 @@ class AdminController extends Controller
             return redirect()->route('admin.specialties')->with('error', 'Нельзя удалить специальность, к которой привязаны врачи');
         }
 
-        if ($specialty->image) {
-            Storage::disk('public')->delete($specialty->image);
+        if ($specialty->image_url) {
+            Storage::disk('public')->delete($specialty->image_url);
         }
 
         $specialty->delete();

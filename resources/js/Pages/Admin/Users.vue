@@ -80,13 +80,13 @@
                             </tr>
                         </thead>
                         <tbody>
-                            <tr v-for="user in users.data || users" :key="user.id || user">
+                            <tr v-for="user in (users.data || users || [])" :key="user.id || user">
                                 <td>
                                     <div class="flex items-center space-x-3">
                                         <div class="avatar">
                                             <div class="mask mask-squircle w-12 h-12 overflow-hidden">
                                                 <img v-if="user.doctor?.photo_url" :src="storageUrl(user.doctor.photo_url)" :alt="user.name" class="w-full h-full object-cover" />
-                                                <img v-else-if="user.doctor?.specialty?.image" :src="storageUrl(user.doctor.specialty.image)" :alt="user.doctor?.specialty?.name" class="w-full h-full object-cover" />
+                                                <img v-else-if="user.doctor?.specialty?.image_url" :src="storageUrl(user.doctor.specialty.image_url)" :alt="user.doctor?.specialty?.name" class="w-full h-full object-cover" />
                                                 <div v-else class="bg-primary text-primary-content flex items-center justify-center text-lg font-bold w-full h-full">
                                                     {{ user.name.charAt(0).toUpperCase() }}
                                                 </div>
@@ -141,7 +141,7 @@
                 </div>
             </div>
         </div>
-        <Pagination v-if="users.links" :links="users.links" />
+        <Pagination v-if="users && users.links" :links="users.links" />
     </AppLayout>
 </template>
 
@@ -166,13 +166,20 @@ const selectedRole = ref(props.filters.role || '')
 
 const roleStats = computed(() => {
     const stats = { patient: 0, doctor: 0, registrar: 0, admin: 0 }
-    (props.users.data || props.users).forEach(user => {
-        user.roles.forEach(role => {
-            if (stats.hasOwnProperty(role.name)) {
-                stats[role.name]++
+    const users = props.users.data || props.users || []
+    
+    if (Array.isArray(users)) {
+        users.forEach(user => {
+            if (user.roles && Array.isArray(user.roles)) {
+                user.roles.forEach(role => {
+                    if (stats.hasOwnProperty(role.name)) {
+                        stats[role.name]++
+                    }
+                })
             }
         })
-    })
+    }
+    
     return stats
 })
 
