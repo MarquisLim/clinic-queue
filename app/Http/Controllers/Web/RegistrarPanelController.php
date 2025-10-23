@@ -36,7 +36,7 @@ class RegistrarPanelController extends Controller
 
         $queueService = app(QueueService::class);
 
-        // Получаем очереди для каждого врача
+        // Get queue positions for each doctor
         $doctors->transform(function ($doctor) use ($queueService) {
             $appointments = Appointment::query()
                 ->with(['patient:id,name'])
@@ -74,7 +74,7 @@ class RegistrarPanelController extends Controller
             $oldStatus = $appointment->status;
             $appointment->update(['status' => 'checked_in']);
 
-            // Логируем изменение статуса
+            // Log status change
             StatusLog::create([
                 'appointment_id' => $appointment->id,
                 'user_id' => $user->id,
@@ -87,7 +87,7 @@ class RegistrarPanelController extends Controller
                 ],
             ]);
 
-            // Отправляем событие
+            // Dispatch event
             event(new AppointmentStatusChanged($appointment, $oldStatus, 'checked_in'));
         });
 
@@ -96,42 +96,55 @@ class RegistrarPanelController extends Controller
 
     public function cancelAppointment(Request $request, Appointment $appointment)
     {
-        $user = $request->user();
+        try {
+            $user = $request->user();
 
-        if ($appointment->status === 'cancelled') {
-            return back()->with('ok', 'Запись уже отменена');
-        }
+            if ($appointment->status === 'cancelled') {
+                return back()->with('ok', 'Запись уже отменена');
+            }
 
-        if ($appointment->status === 'done') {
-            return back()->withErrors(['appointment' => 'Нельзя отменить завершённую запись']);
-        }
+            if ($appointment->status === 'done') {
+                return back()->withErrors(['appointment' => 'Нельзя отменить завершённую запись']);
+            }
 
-        DB::transaction(function () use ($appointment, $user) {
-            $oldStatus = $appointment->status;
-            $appointment->update([
-                'status' => 'cancelled',
-                'late_cancel' => false,
-            ]);
+            DB::transaction(function () use ($appointment, $user, $request) {
+                $oldStatus = $appointment->status;
+                $appointment->update([
+                    'status' => 'cancelled',
+                    'late_cancel' => false,
+                ]);
 
-            // Логируем изменение статуса
-            StatusLog::create([
+                // Log status change
+                StatusLog::create([
+                    'appointment_id' => $appointment->id,
+                    'user_id' => $user->id,
+                    'from_status' => $oldStatus,
+                    'to_status' => 'cancelled',
+                    'changed_at' => now(),
+                    'meta' => [
+                        'changed_by' => 'registrar',
+                        'registrar_id' => $user->id,
+                        'reason' => $request->input('reason', 'Отменено регистратором'),
+                    ],
+                ]);
+
+                // Dispatch event
+                event(new AppointmentStatusChanged($appointment, $oldStatus, 'cancelled'));
+            });
+
+            return back()->with('ok', 'Запись отменена');
+        } catch (\Exception $e) {
+            \Log::error('Registrar appointment cancellation error', [
                 'appointment_id' => $appointment->id,
-                'user_id' => $user->id,
-                'from_status' => $oldStatus,
-                'to_status' => 'cancelled',
-                'changed_at' => now(),
-                'meta' => [
-                    'changed_by' => 'registrar',
-                    'registrar_id' => $user->id,
-                    'reason' => $request->input('reason', 'Отменено регистратором'),
-                ],
+                'registrar_id' => $request->user()->id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
             ]);
-
-            // Отправляем событие
-            event(new AppointmentStatusChanged($appointment, $oldStatus, 'cancelled'));
-        });
-
-        return back()->with('ok', 'Запись отменена');
+            
+            return back()->withErrors([
+                'appointment' => 'Произошла ошибка при отмене записи. Попробуйте еще раз.'
+            ]);
+        }
     }
 
     public function statusLogs(Request $request)
@@ -159,7 +172,7 @@ class RegistrarPanelController extends Controller
 
         $appointment = Appointment::with(['doctor.specialty'])->findOrFail($request->appointment_id);
         
-        // Получаем врачей той же специальности
+        // Get doctors with the same specialty
         $doctors = Doctor::with(['user', 'specialty'])
             ->where('specialty_id', $appointment->doctor->specialty_id)
             ->active()
@@ -192,7 +205,7 @@ class RegistrarPanelController extends Controller
             'slot_end' => 'required|date|after:slot_start',
         ]);
 
-        // Проверяем, что новый слот доступен
+        // Check if new slot is available
         $slotService = app(SlotService::class);
         $isAvailable = $slotService->isSlotAvailable(
             $request->doctor_id,
@@ -204,19 +217,19 @@ class RegistrarPanelController extends Controller
             return response()->json(['error' => 'Выбранный слот недоступен'], 422);
         }
 
-        // Проверяем, что новый слот не в прошлом
+        // Check if new slot is not in the past
         if (now()->gt($request->slot_start)) {
             return response()->json(['error' => 'Нельзя переносить запись в прошлое'], 422);
         }
 
-        // Проверяем, что новый врач той же специальности
+        // Check if new doctor has the same specialty
         $newDoctor = Doctor::findOrFail($request->doctor_id);
         if ($newDoctor->specialty_id !== $appointment->doctor->specialty_id) {
             return response()->json(['error' => 'Врач должен быть той же специальности'], 422);
         }
 
         DB::transaction(function () use ($appointment, $request) {
-            // Обновляем запись
+            // Update appointment
             $oldDoctor = $appointment->doctor;
             $oldSlotStart = $appointment->slot_start;
             $oldSlotEnd = $appointment->slot_end;
@@ -225,11 +238,11 @@ class RegistrarPanelController extends Controller
                 'doctor_id' => $request->doctor_id,
                 'slot_start' => $request->slot_start,
                 'slot_end' => $request->slot_end,
-                'status' => 'pending', // Сбрасываем статус
-                'reminder_sent' => false, // Сбрасываем флаг напоминания
+                'status' => 'pending', // Reset status
+                'reminder_sent' => false, // Reset reminder flag
             ]);
 
-            // Логируем изменение
+            // Log change
             StatusLog::create([
                 'appointment_id' => $appointment->id,
                 'old_status' => $appointment->getOriginal('status'),
@@ -239,7 +252,7 @@ class RegistrarPanelController extends Controller
                 'notes' => "Перенесено с {$oldDoctor->user->name} ({$oldSlotStart}) на {$newDoctor->user->name} ({$request->slot_start})"
             ]);
 
-            // Отправляем событие
+            // Dispatch event
             broadcast(new AppointmentStatusChanged($appointment, 'rescheduled'));
         });
 

@@ -24,7 +24,7 @@ class AppServiceProvider extends ServiceProvider
     {
         Vite::prefetch(concurrency: 3);
         
-        // Регистрируем политики
+        // Register policies
         Gate::define('admin', [AdminPolicy::class, 'admin']);
         Gate::define('manage-specialties', [AdminPolicy::class, 'manageSpecialties']);
         Gate::define('manage-doctors', [AdminPolicy::class, 'manageDoctors']);

@@ -307,13 +307,74 @@ const removeImage = () => {
 }
 
 const saveSpecialty = () => {
+    // Защита от множественных отправок
+    if (form.processing) {
+        return
+    }
+
     const url = editingSpecialty.value 
         ? route('admin.specialties.update', editingSpecialty.value.id)
         : route('admin.specialties.store')
     
     const method = editingSpecialty.value ? 'put' : 'post'
 
-    form[method](url)
+    // Проверяем, что все обязательные поля заполнены
+    if (!form.name) {
+        return
+    }
+
+    // Подготавливаем данные для отправки
+    const data = {
+        name: form.name,
+        description: form.description,
+    }
+    
+    // Добавляем изображение только если оно выбрано
+    if (form.image) {
+        data.image = form.image
+    }
+    
+    // Создаем FormData для правильной отправки файлов
+    const formData = new FormData()
+    formData.append('name', data.name)
+    formData.append('description', data.description)
+    
+    if (data.image) {
+        formData.append('image', data.image)
+    }
+    
+    // Добавляем метод для PUT запроса
+    if (method === 'put') {
+        formData.append('_method', 'PUT')
+    }
+    
+    // Добавляем CSRF токен
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content')
+    if (csrfToken) {
+        formData.append('_token', csrfToken)
+    }
+    
+    // Отправляем данные через fetch
+    fetch(url, {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRF-TOKEN': csrfToken
+        }
+    })
+    .then(response => {
+        if (response.ok) {
+            closeModal()
+            // Перезагружаем страницу для обновления данных
+            window.location.reload()
+        } else {
+            throw new Error('Network response was not ok')
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error)
+    })
 }
 
 const editSpecialty = (specialty) => {

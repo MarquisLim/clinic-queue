@@ -111,7 +111,18 @@ onMounted(fetchAvailability);
         <div class="flex flex-col md:flex-row gap-6">
             <!-- Photo -->
             <div class="md:w-28">
-                <img :src="doctor.photo_url" :alt="doctor.user?.name" class="w-28 h-28 object-cover rounded-2xl shadow" />
+                <img 
+                    v-if="doctor.photo_url" 
+                    :src="doctor.photo_url.startsWith('http') ? doctor.photo_url : `/storage/${doctor.photo_url}`" 
+                    :alt="doctor.user?.name" 
+                    class="w-28 h-28 object-cover rounded-2xl shadow" 
+                />
+                <div 
+                    v-else 
+                    class="w-28 h-28 bg-primary text-primary-content flex items-center justify-center text-2xl font-bold rounded-2xl shadow"
+                >
+                    {{ (doctor.user?.name || 'В').charAt(0).toUpperCase() }}
+                </div>
             </div>
 
             <!-- Main info -->

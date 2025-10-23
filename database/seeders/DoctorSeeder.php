@@ -170,22 +170,32 @@ class DoctorSeeder extends Seeder
     }
 
     /**
+     * Получает fallback изображение для врача
+     */
+    private function getFallbackDoctorImage(string $name): string
+    {
+        // Создаем простое изображение с инициалами врача
+        $initials = strtoupper(substr($name, 0, 2));
+        return 'https://ui-avatars.com/api/?name=' . urlencode($initials) . '&size=200&background=4F46E5&color=FFFFFF&format=png';
+    }
+
+    /**
      * Получает изображение врача с Unsplash по медицинским тегам
      */
     private function getDoctorImage(string $specialty): string
     {
         $specialtyImages = [
-            'Терапевт' => 'https://picsum.photos/400/400?random=200',
-            'Кардиолог' => 'https://picsum.photos/400/400?random=201',
-            'Хирург' => 'https://picsum.photos/400/400?random=202',
-            'Педиатр' => 'https://picsum.photos/400/400?random=203',
-            'Невролог' => 'https://picsum.photos/400/400?random=204',
-            'Стоматолог' => 'https://picsum.photos/400/400?random=205',
-            'ЛОР' => 'https://picsum.photos/400/400?random=206',
-            'Офтальмолог' => 'https://picsum.photos/400/400?random=207',
+            'Терапевт' => 'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=400&h=400&fit=crop&crop=face&auto=format',
+            'Кардиолог' => 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=400&h=400&fit=crop&crop=face&auto=format',
+            'Хирург' => 'https://images.unsplash.com/photo-1582750433449-648ed127bb54?w=400&h=400&fit=crop&crop=face&auto=format',
+            'Педиатр' => 'https://images.unsplash.com/photo-1594824388852-8a0b1b0b0b0b?w=400&h=400&fit=crop&crop=face&auto=format',
+            'Невролог' => 'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=400&h=400&fit=crop&crop=face&auto=format',
+            'Стоматолог' => 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=400&h=400&fit=crop&crop=face&auto=format',
+            'ЛОР' => 'https://images.unsplash.com/photo-1582750433449-648ed127bb54?w=400&h=400&fit=crop&crop=face&auto=format',
+            'Офтальмолог' => 'https://images.unsplash.com/photo-1594824388852-8a0b1b0b0b0b?w=400&h=400&fit=crop&crop=face&auto=format',
         ];
 
-        return $specialtyImages[$specialty] ?? 'https://picsum.photos/400/400?random=200';
+        return $specialtyImages[$specialty] ?? 'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=400&h=400&fit=crop&crop=face&auto=format';
     }
 
     /**
@@ -194,21 +204,63 @@ class DoctorSeeder extends Seeder
     private function downloadAndSavePhoto(string $url, string $folder, string $name): string
     {
         try {
-            $contents = file_get_contents($url);
-            if ($contents === false) {
+            // Создаем контекст с коротким таймаутом
+            $context = stream_context_create([
+                'http' => [
+                    'timeout' => 5, // Уменьшил таймаут до 5 секунд
+                    'user_agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                    'method' => 'GET',
+                    'header' => [
+                        'Accept: image/*',
+                        'Connection: close'
+                    ]
+                ]
+            ]);
+            
+            $contents = @file_get_contents($url, false, $context);
+            if ($contents === false || empty($contents)) {
                 throw new \Exception("Не удалось скачать изображение с URL: {$url}");
+            }
+
+            // Проверяем, что это действительно изображение
+            $imageInfo = @getimagesizefromstring($contents);
+            if ($imageInfo === false) {
+                throw new \Exception("Скачанный файл не является изображением");
             }
 
             $filename = strtolower(str_replace([' ', '.'], ['_', ''], $name)) . '.jpg';
             $path = "{$folder}/{$filename}";
             
+            // Убеждаемся, что папка существует
+            if (!Storage::disk('public')->exists($folder)) {
+                Storage::disk('public')->makeDirectory($folder);
+            }
+            
             Storage::disk('public')->put($path, $contents);
             
+            echo "✓ Загружено фото для {$name}\n";
             return $path;
         } catch (\Exception $e) {
             // Если не удалось скачать, используем fallback
-            \Log::warning("Не удалось скачать фото для {$name}: " . $e->getMessage());
-            return 'https://via.placeholder.com/200x200/4F46E5/FFFFFF?text=' . urlencode(substr($name, 0, 2));
+            echo "⚠ Не удалось загрузить фото для {$name}, используем fallback\n";
+            
+            // Создаем простое изображение с инициалами
+            $initials = strtoupper(substr($name, 0, 2));
+            $fallbackUrl = "https://ui-avatars.com/api/?name={$initials}&size=200&background=4F46E5&color=FFFFFF&format=png";
+            
+            try {
+                $fallbackContents = @file_get_contents($fallbackUrl);
+                if ($fallbackContents !== false) {
+                    $filename = strtolower(str_replace([' ', '.'], ['_', ''], $name)) . '.png';
+                    $path = "{$folder}/{$filename}";
+                    Storage::disk('public')->put($path, $fallbackContents);
+                    return $path;
+                }
+            } catch (\Exception $fallbackException) {
+                echo "⚠ Не удалось создать fallback изображение для {$name}\n";
+            }
+            
+            return 'https://ui-avatars.com/api/?name=' . urlencode(substr($name, 0, 2)) . '&size=200&background=4F46E5&color=FFFFFF';
         }
     }
 }

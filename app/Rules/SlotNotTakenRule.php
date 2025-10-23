@@ -26,7 +26,7 @@ class SlotNotTakenRule implements ValidationRule
             ->exists();
 
         if ($exists) {
-            $fail('Слот уже занят.');
+            $fail('Slot is already taken.');
         }
     }
 }

@@ -79,7 +79,7 @@ class DoctorPanelController extends Controller
                 'finished_at' => $newStatus === 'done' ? now() : $appointment->finished_at,
             ]);
 
-            // Логируем изменение статуса
+            // Log status change
             StatusLog::create([
                 'appointment_id' => $appointment->id,
                 'user_id' => $user->id,
@@ -92,7 +92,7 @@ class DoctorPanelController extends Controller
                 ],
             ]);
 
-            // Отправляем событие
+            // Dispatch event
             event(new AppointmentStatusChanged($appointment, $oldStatus, $newStatus));
         });
 

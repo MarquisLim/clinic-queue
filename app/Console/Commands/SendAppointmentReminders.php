@@ -32,9 +32,9 @@ class SendAppointmentReminders extends Command
     {
         $this->info('Sending appointment reminders...');
 
-        // Находим записи, которые начинаются через 10 минут
+        // Find appointments starting in 10 minutes
         $reminderTime = now()->addMinutes(10);
-        $tolerance = 2; // Допуск в 2 минуты
+        $tolerance = 2; // 2 minutes tolerance
 
         $appointments = Appointment::query()
             ->with(['patient', 'doctor.user', 'doctor.specialty'])
@@ -50,13 +50,13 @@ class SendAppointmentReminders extends Command
 
         foreach ($appointments as $appointment) {
             try {
-                // Отправляем уведомление пациенту
+                // Send notification to patient
                 $this->sendReminderToPatient($appointment);
                 
-                // Отправляем уведомление врачу
+                // Send notification to doctor
                 $this->sendReminderToDoctor($appointment);
                 
-                // Отмечаем, что напоминание отправлено
+                // Mark reminder as sent
                 $appointment->update(['reminder_sent' => true]);
                 
                 $sentCount++;
@@ -75,7 +75,7 @@ class SendAppointmentReminders extends Command
 
     private function sendReminderToPatient(Appointment $appointment)
     {
-        // Создаем уведомление в базе данных
+        // Create notification in database
         $appointment->patient->notifications()->create([
             'id' => \Illuminate\Support\Str::uuid(),
             'type' => 'appointment_reminder',
@@ -90,13 +90,13 @@ class SendAppointmentReminders extends Command
             'read_at' => null,
         ]);
 
-        // Отправляем real-time уведомление
+        // Send real-time notification
         event(new AppointmentReminder($appointment, 'patient'));
     }
 
     private function sendReminderToDoctor(Appointment $appointment)
     {
-        // Создаем уведомление врачу
+        // Create notification for doctor
         $appointment->doctor->user->notifications()->create([
             'id' => \Illuminate\Support\Str::uuid(),
             'type' => 'appointment_reminder',
@@ -110,7 +110,7 @@ class SendAppointmentReminders extends Command
             'read_at' => null,
         ]);
 
-        // Отправляем real-time уведомление
+        // Send real-time notification
         event(new AppointmentReminder($appointment, 'doctor'));
     }
 }

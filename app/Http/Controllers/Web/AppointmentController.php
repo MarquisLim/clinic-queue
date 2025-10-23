@@ -111,32 +111,45 @@ class AppointmentController extends Controller
 
     public function destroy(Request $request, Appointment $appointment)
     {
-        $this->authorize('update', $appointment);
+        try {
+            $this->authorize('update', $appointment);
 
-        if ($appointment->status === 'cancelled') {
-            return back()->with('ok', 'Запись уже отменена.');
-        }
+            if ($appointment->status === 'cancelled') {
+                return back()->with('ok', 'Запись уже отменена.');
+            }
 
-        $limitMin = 10;
-        if (now()->diffInMinutes($appointment->slot_start, false) < $limitMin) {
+            $limitMin = 10;
+            if (now()->diffInMinutes($appointment->slot_start, false) < $limitMin) {
+                return back()->withErrors([
+                    'appointment' => "Отменить запись можно не позднее чем за {$limitMin} минут."
+                ]);
+            }
+
+            DB::transaction(function () use ($appointment) {
+                $a = Appointment::whereKey($appointment->id)->lockForUpdate()->first();
+                if ($a->status !== 'cancelled') {
+                    $a->update([
+                        'status' => 'cancelled',
+                        'late_cancel' => false,
+                    ]);
+                    
+                    event(new AppointmentCancelled($a));
+                }
+            });
+
+            return back()->with('ok', 'Запись отменена.');
+        } catch (\Exception $e) {
+            \Log::error('Appointment cancellation error', [
+                'appointment_id' => $appointment->id,
+                'user_id' => $request->user()->id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
             return back()->withErrors([
-                'appointment' => "Отменить запись можно не позднее чем за {$limitMin} минут."
+                'appointment' => 'Произошла ошибка при отмене записи. Попробуйте еще раз.'
             ]);
         }
-
-        DB::transaction(function () use ($appointment) {
-            $a = Appointment::whereKey($appointment->id)->lockForUpdate()->first();
-            if ($a->status !== 'cancelled') {
-                $a->update([
-                    'status' => 'cancelled',
-                    'late_cancel' => false,
-                ]);
-                
-                event(new AppointmentCancelled($a));
-            }
-        });
-
-        return back()->with('ok', 'Запись отменена.');
     }
 
     private function generateTicket(int $doctorId, \DateTimeInterface $slotStart): string

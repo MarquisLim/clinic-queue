@@ -23,21 +23,22 @@
         <div 
             v-if="showDropdown"
             class="absolute right-0 mt-2 w-80 bg-base-100 rounded-lg shadow-xl border border-base-300 z-50"
+            style="max-width: calc(100vw - 2rem);"
         >
             <div class="p-4 border-b border-base-300">
                 <div class="flex items-center justify-between">
                     <h3 class="font-semibold text-lg">Уведомления</h3>
-                    <div class="flex gap-2">
+                    <div class="flex gap-1 flex-wrap">
                         <button 
                             v-if="unreadCount > 0"
                             @click="markAllAsRead"
-                            class="btn btn-xs btn-outline"
+                            class="btn btn-xs btn-outline whitespace-nowrap"
                             :disabled="loading"
                         >
-                            Отметить все как прочитанные
+                            Отметить все
                         </button>
-                        <button @click="viewAll" class="btn btn-xs btn-primary">
-                            Все уведомления
+                        <button @click="viewAll" class="btn btn-xs btn-primary whitespace-nowrap">
+                            Все
                         </button>
                     </div>
                 </div>
@@ -143,21 +144,49 @@ onMounted(() => {
     loadUnreadCount()
     loadRecentNotifications()
     
-    // Настраиваем real-time уведомления
+    // Setup real-time notifications
+    console.log('Setting up Echo...', { 
+        hasEcho: !!window.Echo, 
+        userId: window.Laravel?.user?.id,
+        user: window.Laravel?.user 
+    })
+    
     if (window.Echo) {
         echo = window.Echo
         
-        // Слушаем канал уведомлений пользователя
+            // Listen to user notifications channel
         const userId = window.Laravel?.user?.id || null
         if (userId) {
+            console.log(`Subscribing to notifications.${userId} channel`)
+            
             echo.channel(`notifications.${userId}`)
                 .listen('.appointment.reminder', (e) => {
-                    console.log('New reminder notification:', e)
-                    showToast(e.message, 'info')
-                    loadUnreadCount()
+                    console.log('🔔 New reminder notification received:', e)
+                    
+                    // Show toast notification
+                    showToast(e.message || 'Новое напоминание о записи', 'info')
+                    
+                    // Update unread counter
+                    unreadCount.value++
+                    console.log('📊 Updated unread count:', unreadCount.value)
+                    
+                    // Update notifications list
                     loadRecentNotifications()
+                    
+                    // Additionally update counter from server for accuracy
+                    setTimeout(() => {
+                        console.log('🔄 Refreshing unread count from server...')
+                        loadUnreadCount()
+                    }, 500)
                 })
+                .error((error) => {
+                    console.error('❌ Echo channel error:', error)
+                })
+        } else {
+            console.warn('⚠️ No user ID found for notifications channel')
         }
+    } else {
+        console.warn('⚠️ Echo not available')
     }
 })
 
@@ -205,8 +234,19 @@ const loadRecentNotifications = async () => {
 const markAsRead = async (notificationId) => {
     try {
         await axios.post(`/notifications/${notificationId}/read`)
-        loadUnreadCount()
+        
+        // Update counter locally
+        if (unreadCount.value > 0) {
+            unreadCount.value--
+        }
+        
+        // Update notifications list
         loadRecentNotifications()
+        
+        // Additionally update counter from server
+        setTimeout(() => {
+            loadUnreadCount()
+        }, 200)
     } catch (error) {
         console.error('Error marking notification as read:', error)
     }
@@ -215,8 +255,17 @@ const markAsRead = async (notificationId) => {
 const markAllAsRead = async () => {
     try {
         await axios.post('/notifications/mark-all-read')
-        loadUnreadCount()
+        
+        // Update counter locally
+        unreadCount.value = 0
+        
+        // Update notifications list
         loadRecentNotifications()
+        
+        // Additionally update counter from server
+        setTimeout(() => {
+            loadUnreadCount()
+        }, 200)
     } catch (error) {
         console.error('Error marking all as read:', error)
     }
@@ -225,8 +274,20 @@ const markAllAsRead = async () => {
 const deleteNotification = async (notificationId) => {
     try {
         await axios.delete(`/notifications/${notificationId}`)
-        loadUnreadCount()
+        
+        // Update counter locally (if notification was unread)
+        const notification = notifications.value.find(n => n.id === notificationId)
+        if (notification && !notification.read_at && unreadCount.value > 0) {
+            unreadCount.value--
+        }
+        
+        // Update notifications list
         loadRecentNotifications()
+        
+        // Additionally update counter from server
+        setTimeout(() => {
+            loadUnreadCount()
+        }, 200)
     } catch (error) {
         console.error('Error deleting notification:', error)
     }
@@ -236,6 +297,8 @@ const viewAll = () => {
     router.visit('/notifications')
     closeDropdown()
 }
+
+// Toast уведомления уже объявлены выше
 
 const formatTime = (dateString) => {
     const date = new Date(dateString)
@@ -257,6 +320,11 @@ const showToast = (message, type = 'info') => {
         message,
         type
     })
+    
+    // Автоматически удаляем toast через 5 секунд
+    setTimeout(() => {
+        removeToast(id)
+    }, 5000)
 }
 
 const removeToast = (id) => {

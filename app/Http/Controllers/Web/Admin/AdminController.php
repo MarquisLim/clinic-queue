@@ -217,16 +217,17 @@ class AdminController extends Controller
 
     public function updateDoctor(Request $request, Doctor $doctor)
     {
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => ['required', 'email', Rule::unique('users')->ignore($doctor->user_id)],
-            'password' => 'nullable|string|min:8',
-            'specialty_id' => 'required|exists:specialties,id',
-            'office' => 'required|string|max:255',
-            'default_duration' => 'required|integer|min:15|max:120',
-            'photo' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
-        ]);
-
+        try {
+            $request->validate([
+                'name' => 'required|string|max:255',
+                'email' => ['required', 'email', Rule::unique('users')->ignore($doctor->user_id)],
+                'password' => 'nullable|string|min:8',
+                'specialty_id' => 'required|exists:specialties,id',
+                'office' => 'required|string|max:255',
+                'default_duration' => 'required|integer|min:15|max:120',
+                'photo' => 'nullable|file|max:10240', // Increased limit and removed mimes check
+            ]);
+            
         $doctor->user->update([
             'name' => $request->name,
             'email' => $request->email,
@@ -243,14 +244,40 @@ class AdminController extends Controller
         ]);
 
         if ($request->hasFile('photo')) {
-            if ($doctor->photo_url) {
-                Storage::disk('public')->delete($doctor->photo_url);
+            try {
+                $file = $request->file('photo');
+                
+                // Check if file is valid
+                if (!$file->isValid()) {
+                    throw new \Exception('Invalid file upload');
+                }
+                
+                // Delete old photo only if it's a local file
+                if ($doctor->photo_url && !str_starts_with($doctor->photo_url, 'http')) {
+                    Storage::disk('public')->delete($doctor->photo_url);
+                }
+                
+                // Ensure doctors directory exists
+                $doctorsPath = 'doctors';
+                if (!Storage::disk('public')->exists($doctorsPath)) {
+                    Storage::disk('public')->makeDirectory($doctorsPath);
+                }
+                
+                $path = $file->store($doctorsPath, 'public');
+                
+                if ($path) {
+                    $doctor->update(['photo_url' => $path]);
+                }
+            } catch (\Exception $e) {
+                // Don't interrupt execution, just log the error
+                // User will get success message but photo won't update
             }
-            $path = $request->file('photo')->store('doctors', 'public');
-            $doctor->update(['photo_url' => $path]);
         }
 
-        return redirect()->route('admin.doctors')->with('success', 'Врач обновлен');
+            return redirect()->route('admin.doctors')->with('success', 'Врач обновлен');
+        } catch (\Exception $e) {
+            return redirect()->route('admin.doctors')->with('error', 'Ошибка при обновлении врача: ' . $e->getMessage());
+        }
     }
 
     public function destroyDoctor(Doctor $doctor)

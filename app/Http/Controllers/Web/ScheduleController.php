@@ -96,14 +96,14 @@ class ScheduleController extends Controller
         $weekStart = Carbon::parse($request->week_start)->startOfWeek();
         $doctor = Doctor::findOrFail($request->doctor_id);
 
-        // Удаляем существующее расписание на эту неделю
+        // Remove existing schedule for this week
         Schedule::where('doctor_id', $request->doctor_id)
             ->whereBetween('date', [$weekStart, $weekStart->copy()->endOfWeek()])
             ->delete();
 
         $schedules = [];
 
-        // Создаем расписание для каждого рабочего дня
+        // Create schedule for each working day
         foreach ($request->working_days as $dayOfWeek) {
             $date = $weekStart->copy()->addDays($dayOfWeek - 1);
             

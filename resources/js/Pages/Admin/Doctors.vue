@@ -39,7 +39,7 @@
                 class="card bg-base-100 shadow-xl"
             >
                 <div class="card-body text-center">
-                    <div class="avatar mb-4">
+                    <div class="avatar mb-4 flex justify-center">
                         <div class="w-24 h-24 rounded-full ring ring-primary ring-offset-base-100 ring-offset-2 overflow-hidden">
                             <img v-if="doctor.photo_url" :src="storageUrl(doctor.photo_url)" :alt="doctor.user?.name || 'Врач'" class="w-full h-full object-cover" />
                             <img v-else-if="doctor.specialty?.image_url" :src="storageUrl(doctor.specialty.image_url)" :alt="doctor.specialty?.name || 'Специальность'" class="w-full h-full object-cover" />
@@ -291,6 +291,10 @@ const form = useForm({
 
 const openModal = (doctor = null) => {
     editingDoctor.value = doctor
+    
+    // Очищаем предыдущие ошибки
+    form.clearErrors()
+    
     if (doctor) {
         form.name = doctor.user?.name || ''
         form.email = doctor.user?.email || ''
@@ -298,8 +302,9 @@ const openModal = (doctor = null) => {
         form.office = doctor.room || ''
         form.default_duration = doctor.avg_duration_min || 30
         form.password = ''
+        form.photo = null // Сбрасываем фото при открытии модалки
         
-        imagePreview.value = `/storage/${doctor.photo_url}`
+        imagePreview.value = doctor.photo_url ? `/storage/${doctor.photo_url}` : null
     } else {
         form.reset()
     }
@@ -325,17 +330,125 @@ const handleImageChange = (event) => {
             imagePreview.value = e.target.result
         }
         reader.readAsDataURL(file)
+        console.log('Image changed, file:', file)
+        console.log('Form photo field:', form.photo)
+    } else {
+        form.photo = null
+        imagePreview.value = editingDoctor.value?.photo_url ? `/storage/${editingDoctor.value.photo_url}` : null
+        console.log('Image cleared')
     }
 }
 
 const saveDoctor = () => {
+    // Защита от множественных отправок
+    if (form.processing) {
+        return
+    }
+
     const url = editingDoctor.value 
         ? route('admin.doctors.update', editingDoctor.value.id)
         : route('admin.doctors.store')
     
     const method = editingDoctor.value ? 'put' : 'post'
 
-    form[method](url)
+    // Проверяем, что все обязательные поля заполнены
+    if (!form.name || !form.email || !form.specialty_id || !form.office || !form.default_duration) {
+        return
+    }
+
+    // Отладочная информация для фото
+    if (form.photo) {
+        console.log('Photo file details:', {
+            name: form.photo.name,
+            size: form.photo.size,
+            type: form.photo.type,
+            lastModified: form.photo.lastModified
+        })
+        
+        // Проверяем, что файл действительно существует
+        if (form.photo instanceof File) {
+            console.log('File is valid File object')
+        } else {
+            console.error('File is not a valid File object:', typeof form.photo)
+        }
+    } else {
+        console.log('No photo file selected')
+    }
+
+    // Подготавливаем данные для отправки
+    const data = {
+        name: form.name,
+        email: form.email,
+        specialty_id: form.specialty_id,
+        office: form.office,
+        default_duration: form.default_duration,
+    }
+    
+    // Добавляем пароль только если он есть
+    if (form.password) {
+        data.password = form.password
+    }
+    
+    // Добавляем фото только если оно выбрано
+    if (form.photo) {
+        data.photo = form.photo
+    }
+    
+    console.log('Sending data:', data)
+    
+    // Создаем FormData для правильной отправки файлов
+    const formData = new FormData()
+    formData.append('name', data.name)
+    formData.append('email', data.email)
+    formData.append('specialty_id', data.specialty_id)
+    formData.append('office', data.office)
+    formData.append('default_duration', data.default_duration)
+    
+    if (data.password) {
+        formData.append('password', data.password)
+    }
+    
+    if (data.photo) {
+        formData.append('photo', data.photo)
+    }
+    
+    // Добавляем метод для PUT запроса
+    if (method === 'put') {
+        formData.append('_method', 'PUT')
+    }
+    
+    // Добавляем CSRF токен
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content')
+    if (csrfToken) {
+        formData.append('_token', csrfToken)
+    }
+    
+    console.log('FormData contents:')
+    for (let [key, value] of formData.entries()) {
+        console.log(key, value)
+    }
+    
+    // Отправляем данные через fetch
+    fetch(url, {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRF-TOKEN': csrfToken
+        }
+    })
+    .then(response => {
+        if (response.ok) {
+            closeModal()
+            // Перезагружаем страницу для обновления данных
+            window.location.reload()
+        } else {
+            throw new Error('Network response was not ok')
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error)
+    })
 }
 
 const editDoctor = (doctor) => {

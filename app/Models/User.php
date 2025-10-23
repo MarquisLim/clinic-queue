@@ -64,7 +64,7 @@ class User extends Authenticatable
     public function isRegistrar(): bool{ return $this->hasRole('registrar'); }
     public function isAdmin(): bool    { return $this->hasRole('admin'); }
 
-    // Аксессоры для JSON
+    // JSON accessors
     public function getIsDoctorAttribute(): bool { return $this->isDoctor(); }
     public function getIsPatientAttribute(): bool { return $this->isPatient(); }
     public function getIsRegistrarAttribute(): bool { return $this->isRegistrar(); }

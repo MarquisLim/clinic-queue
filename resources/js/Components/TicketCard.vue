@@ -1,14 +1,14 @@
 <script setup>
 import { Link } from '@inertiajs/vue3';
 import { useQueueUpdates } from '@/composables/useQueueUpdates';
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 
 const props = defineProps({
     appointment: { type: Object, required: true }, // { id, slot_start, status, ticket_no, doctor:{user:{name}} }
     history: { type: Boolean, default: false }
 });
 
-// Используем real-time обновления только для активных записей
+// Use real-time updates only for active appointments
 const { isConnected } = useQueueUpdates(
     props.history ? null : props.appointment.patient_id,
     props.history ? null : props.appointment.doctor_id
@@ -44,6 +44,50 @@ function statusClass(s) {
         cancelled:   'badge-ghost',
     }[s] || 'badge-ghost';
 }
+
+// Functions for handling appointment cancellation
+const confirmCancel = () => {
+    return confirm('Вы уверены, что хотите отменить запись?');
+};
+
+const handleCancelError = (error) => {
+    console.error('Ошибка при отмене записи:', error);
+    alert('Произошла ошибка при отмене записи. Попробуйте еще раз.');
+};
+
+// Check if appointment can be cancelled (at least 10 minutes before)
+const canCancel = computed(() => {
+    if (props.history || props.appointment.status !== 'pending') {
+        return false;
+    }
+    
+    const appointmentTime = new Date(props.appointment.slot_start);
+    const now = new Date();
+    const diffMinutes = (appointmentTime - now) / (1000 * 60);
+    
+    return diffMinutes >= 10;
+});
+
+// Get time until appointment information
+const timeUntilAppointment = computed(() => {
+    if (props.history || props.appointment.status !== 'pending') {
+        return null;
+    }
+    
+    const appointmentTime = new Date(props.appointment.slot_start);
+    const now = new Date();
+    const diffMinutes = Math.floor((appointmentTime - now) / (1000 * 60));
+    
+    if (diffMinutes < 0) {
+        return 'Запись уже началась';
+    } else if (diffMinutes < 60) {
+        return `Через ${diffMinutes} мин`;
+    } else {
+        const hours = Math.floor(diffMinutes / 60);
+        const minutes = diffMinutes % 60;
+        return `Через ${hours}ч ${minutes}мин`;
+    }
+});
 </script>
 
 <template>
@@ -95,14 +139,20 @@ function statusClass(s) {
 
                 <div class="mt-4 flex justify-end">
                     <Link
-                        v-if="!history && appointment.status === 'pending'"
+                        v-if="canCancel"
                         :href="route('appointments.destroy', appointment.id)"
                         method="delete"
                         as="button"
                         class="btn btn-error btn-sm rounded-full"
+                        :on-before="confirmCancel"
+                        :on-error="handleCancelError"
                     >
                         Отменить
                     </Link>
+                    <div v-else-if="!history && appointment.status === 'pending'" class="text-sm text-gray-500 text-right">
+                        <div>{{ timeUntilAppointment }}</div>
+                        <div class="text-xs">Отмена возможна не позднее чем за 10 минут</div>
+                    </div>
                 </div>
             </div>
         </div>

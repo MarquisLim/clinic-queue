@@ -42,7 +42,7 @@ class RegisteredUserController extends Controller
             'password' => Hash::make($request->password),
         ]);
 
-        // Назначаем роль "patient" по умолчанию
+        // Assign "patient" role by default
         $user->assignRole('patient');
 
         event(new Registered($user));
